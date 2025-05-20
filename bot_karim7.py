@@ -1,22 +1,18 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-from dotenv import load_dotenv
-import os
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-load_dotenv()
-
-TOKEN = "7884639351:AAHekyYrrQjdRNBmT1Nt1PjoRNLjLxGbz78"
+TOKEN = "7884639351:AAHekyYrrQjdRNBmT1NtlPjoRNLjLxGbz78"
 
 # Приветствие
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [
-        [InlineKeyboardButton("Где и когда?", callback_data="place_time")],
-        [InlineKeyboardButton("Что будет?", callback_data="program")],
-        [InlineKeyboardButton("Подтвердить участие (RSVP)", callback_data="rsvp")]
+        [InlineKeyboardButton("Где и когда?", callback_data='place')],
+        [InlineKeyboardButton("Что будет?", callback_data='program')],
+        [InlineKeyboardButton("Подтвердить участие (RSVP)", callback_data='rsvp')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    message = (
+    welcome_text = (
         "Привет, друг!\n\n"
         "Я — Карим, и 10 июля мне исполняется 7 лет!\n"
         "Добро пожаловать на мой День рождения — здесь ты найдёшь всю самую важную информацию:\n"
@@ -24,43 +20,52 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Будет весело, ярко и по-настоящему круто!\n"
         "Рад, что ты со мной в этот день!"
     )
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
-    await update.message.reply_text(message, reply_markup=reply_markup)
-
-# Ответы на кнопки
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Обработка кнопок
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
 
-    if query.data == "place_time":
+    if query.data == 'place':
         await query.edit_message_text(
-            "Ждём тебя **10 июля в 15:00** по адресу: *Всеволожск, БО 'Топ Лес'*"
+            "Мы собираемся 10 июля в 15:00\n"
+            "Всеволожск, БО «Топ Лес»\n\n"
+            "Не опаздывай — будет круто!"
         )
-    elif query.data == "program":
+
+    elif query.data == 'program':
         await query.edit_message_text(
             "Тебя ждёт:\n"
             "- Катание на квадроциклах\n"
             "- Лазертаг в лесу\n"
-            "- Весёлые танцы с Бобром\n"
-            "- Торт, угощения и сюрпризы!"
+            "- Весёлые танцы с бобром\n"
+            "- Торт и подарки\n"
+            "- Отличное настроение!"
         )
-    elif query.data == "rsvp":
+
+    elif query.data == 'rsvp':
         keyboard = [
-            [InlineKeyboardButton("Я приду!", callback_data="yes")],
-            [InlineKeyboardButton("К сожалению, нет", callback_data="no")]
+            ["Я точно приду!"],
+            ["Не получится("],
+            ["Пока не уверен(а)"]
         ]
-        await query.edit_message_text("Ты придёшь на праздник?", reply_markup=InlineKeyboardMarkup(keyboard))
-    elif query.data == "yes":
-        await query.edit_message_text("Ура! До встречи на празднике!")
-    elif query.data == "no":
-        await query.edit_message_text("Жаль, что не получится. Надеюсь увидеться в другой раз!")
+        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+        await query.edit_message_text("Подтверди, пожалуйста, своё участие:")
+        await query.message.reply_text("Ты придёшь на праздник?", reply_markup=reply_markup)
+
+# Ответ на выбор RSVP
+async def rsvp_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    text = update.message.text
+    await update.message.reply_text(f"Спасибо за ответ: «{text}». До встречи!")
 
 # Запуск
 def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.run_polling()
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, rsvp_reply))
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
