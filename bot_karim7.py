@@ -70,15 +70,13 @@ async def handle_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     response = f"{user.full_name} выбрал вариант: {options[answer]}"
     logging.info(response)
 
-    # Отправим ответ родителям (например, админу)
-    ADMIN_CHAT_ID = 123456789  # ЗАМЕНИ на свой Telegram ID
+    # Отправим RSVP-ответ в личку
+    ADMIN_CHAT_ID = 805971875  # твой Telegram ID
     await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=response)
 
 # Запуск бота
-app = ApplicationBuilder().token("YOUR_BOT_TOKEN").build()  # ЗАМЕНИ на свой токен
-
+app = ApplicationBuilder().token("YOUR_BOT_TOKEN").build()  # Замени на свой токен
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(button_callback))
 app.add_handler(PollHandler(handle_poll_answer))
-
 app.run_polling()
