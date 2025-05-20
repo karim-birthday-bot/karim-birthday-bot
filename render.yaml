@@ -3,8 +3,8 @@ services:
     name: karim-bot
     env: python
     plan: free
-    buildCommand: ""
-    startCommand: python bot_karim7.py
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot_karim7.py"
     envVars:
       - key: PYTHON_VERSION
         value: 3.10
