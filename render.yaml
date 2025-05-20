@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: karim-bot
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python bot_karim7.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10
