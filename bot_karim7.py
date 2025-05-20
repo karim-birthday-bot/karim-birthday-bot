@@ -1,7 +1,9 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
+from datetime import datetime
 
 TOKEN = "7884639351:AAHekyYrrQjdRNBmT1NtlPjoRNLjLxGbz78"
+ADMIN_CHAT_ID = 805971875  # Твой Telegram ID (куда приходят уведомления)
 
 # Приветствие
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -54,18 +56,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text("Подтверди, пожалуйста, своё участие:")
         await query.message.reply_text("Ты придёшь на праздник?", reply_markup=reply_markup)
 
-# Ответ на выбор RSVP
+# Обработка ответа RSVP
 async def rsvp_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.message.from_user
     text = update.message.text
+    time = datetime.now().strftime("%d.%m %H:%M")
+
+    # Ответ пользователю
     await update.message.reply_text(f"Спасибо за ответ: «{text}». До встречи!")
+
+    # Уведомление тебе (организатору)
+    name = user.full_name
+    username = f"@{user.username}" if user.username else "(без username)"
+    notify = f"**{name}** ({username}) выбрал: _{text}_\n({time})"
+    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=notify, parse_mode="Markdown")
 
 # Запуск
 def main():
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_handler))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, rsvp_reply))
-    application.run_polling()
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, rsvp_reply))
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
