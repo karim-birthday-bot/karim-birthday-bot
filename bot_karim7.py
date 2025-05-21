@@ -1,35 +1,106 @@
-import logging from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes import os
+import logging
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 TOKEN = os.getenv("TOKEN")
 
-Список подарков
+# Список подарков (название и ссылка)
+gifts = [
+    {"name": "LEGO Sonic: Наклз и изумрудный храм", "url": "https://ozon.ru/t/8FM5GSK"},
+    {"name": "LEGO Sonic: Побег ежа Шэдоу", "url": "https://ozon.ru/t/HO96qWv"},
+    {"name": "Пластиковый конструктор", "url": "https://ozon.ru/t/EvHJchU"},
+    {"name": "Пижама", "url": "https://ozon.ru/t/AsDmFZE"},
+    {"name": "LEGO Sonic: Самолёт Торнадо", "url": "https://ozon.ru/t/fc8pBHB"},
+    {"name": "Маска для плавания", "url": "https://ozon.ru/t/4Cf7LuR"},
+    {"name": "Эспандер для рук", "url": "https://ozon.ru/t/7oJYfXm"},
+    {"name": "Цветные карандаши", "url": "https://ozon.ru/t/dhXBGrn"},
+]
 
-GIFTS = { "gift1": ("Конструктор LEGO Sonic Наклз и главный изумрудный храм, 325 деталей, 76998", "https://ozon.ru/t/BFM5GSK"), "gift2": ("Конструктор LEGO Sonic the Hedgehog Побег ежа Шэдоу, 76995", "https://ozon.ru/t/HO96qWv"), "gift3": ("Конструктор пластиковый", "https://ozon.ru/t/EvHJchU"), "gift4": ("Пижама", "https://ozon.ru/t/AsDmFZE"), "gift5": ("Конструктор LEGO Sonic Мастерская Тейлза и Самолет Торнадо, 376 деталей, 6+, 76991", "https://ozon.ru/t/fc8pBHB"), "gift6": ("Подводная маска для плавания Kuchenhaus", "https://ozon.ru/t/4Cf7LuR"), "gift7": ("Эспандер кистевой для рук 3в1", "https://ozon.ru/t/7oJYfXm"), "gift8": ("Набор двусторонних цветных карандашей ГАММА", "https://ozon.ru/t/dhXBGrn") } selected_gifts = set()
+chosen_gifts = {}
 
-Главное меню
+# Главное меню
+main_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        ["Где и когда?", "Что будет?"],
+        ["Подтвердить участие (RSVP)", "Выбрать подарок"]
+    ],
+    resize_keyboard=True
+)
 
-main_menu = ReplyKeyboardMarkup( keyboard=[ ["Где и когда?", "Что будет?"], ["Подтвердить участие (RSVP)", "Выбрать подарок"] ], resize_keyboard=True )
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "Привет, друг!\n\n"
+        "Я — Карим, и 10 июля мне исполняется 7 лет!\n"
+        "Добро пожаловать на мой День рождения — здесь ты найдёшь всю самую важную информацию: "
+        "где мы празднуем, во сколько, что тебя ждёт и как повеселиться на полную!\n\n"
+        "Будет весело, ярко и по-настоящему круто!\n"
+        "Рад, что ты со мной в этот день!",
+        reply_markup=main_menu
+    )
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await update.message.reply_text( "Привет, друг!\n\n" "Я — Карим, и 10 июля мне исполняется 7 лет!\n" "Добро пожаловать на мой День рождения — здесь ты найдёшь всю самую важную информацию: где мы празднуем, во сколько, что тебя ждёт и как повеселиться на полную!\n\n" "Будет весело, ярко и по-настоящему круто!\nРад, что ты со мной в этот день!", reply_markup=main_menu )
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "Где и когда?":
+        await update.message.reply_text("Мы собираемся 10 июля в 16:00, Всеволожск, БО «Топ Лес».")
+    elif text == "Что будет?":
+        await update.message.reply_text("Будет аниматор, квест, подарки, бассейн и пицца!")
+    elif text == "Подтвердить участие (RSVP)":
+        keyboard = [
+            [InlineKeyboardButton("Я точно приду!", callback_data="RSVP_1")],
+            [InlineKeyboardButton("Не получится(", callback_data="RSVP_2")],
+            [InlineKeyboardButton("Пока не уверен(а)", callback_data="RSVP_3")]
+        ]
+        await update.message.reply_text(
+            "Подтверди, пожалуйста, своё участие:\nТы придёшь на праздник?",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    elif text == "Выбрать подарок":
+        keyboard = []
+        for i, gift in enumerate(gifts):
+            if i not in chosen_gifts.values():
+                keyboard.append([InlineKeyboardButton(gift["name"], callback_data=f"gift_{i}")])
+        if not keyboard:
+            await update.message.reply_text("Все подарки уже выбраны.")
+        else:
+            await update.message.reply_text("Выбери подарок из списка:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: text = update.message.text if text == "Где и когда?": await update.message.reply_text( "Мы собираемся 10 июля в 16:00 в \nВсеволожск, БО "Топ Лес"\n\nНе опаздывай — будет круто!" ) elif text == "Что будет?": await update.message.reply_text( "Тебя ждёт настоящее приключение:\n— батут\n— квест\n— много вкусной еды\n— торт\n— и подарки!" ) elif text == "Подтвердить участие (RSVP)": keyboard = [ [InlineKeyboardButton("Я точно приду!", callback_data="yes")], [InlineKeyboardButton("Не получится(", callback_data="no")], [InlineKeyboardButton("Пока не уверен(а)", callback_data="maybe")] ] await update.message.reply_text("Подтверди, пожалуйста, своё участие:\nТы придёшь на праздник?", reply_markup=InlineKeyboardMarkup(keyboard)) elif text == "Выбрать подарок": keyboard = [] for key, (title, link) in GIFTS.items(): if key not in selected_gifts: keyboard.append([InlineKeyboardButton(title[:30] + "...", callback_data=key)]) if keyboard: await update.message.reply_text("Выбери один из подарков:", reply_markup=InlineKeyboardMarkup(keyboard)) else: await update.message.reply_text("Все подарки уже выбраны другими гостями.")
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
 
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: query = update.callback_query await query.answer() data = query.data
+    if query.data.startswith("RSVP_"):
+        options = {
+            "RSVP_1": "«Я точно приду!»",
+            "RSVP_2": "«Не получится(»",
+            "RSVP_3": "«Пока не уверен(а)»"
+        }
+        await query.edit_message_text(f"Спасибо за ответ: {options[query.data]}. До встречи!")
+    elif query.data.startswith("gift_"):
+        gift_id = int(query.data.split("_")[1])
+        user_id = query.from_user.id
 
-if data in ["yes", "no", "maybe"]:
-    answers = {
-        "yes": "Спасибо за ответ: «Я точно приду!». До встречи!",
-        "no": "Жаль, что не получится. Надеюсь увидеться в другой раз!",
-        "maybe": "Хорошо, дай знать, когда решишься!"
-    }
-    await query.edit_message_text(answers[data])
-elif data in GIFTS:
-    if data in selected_gifts:
-        await query.edit_message_text("Этот подарок уже выбран. Пожалуйста, выбери другой.")
-    else:
-        selected_gifts.add(data)
-        title, link = GIFTS[data]
-        await query.edit_message_text(f"Спасибо! Ты выбрал подарок: {title}\n\nСсылка на него: {link}")
+        # Проверка, был ли уже выбран подарок этим пользователем
+        if user_id in chosen_gifts:
+            await query.edit_message_text("Ты уже выбрал подарок.")
+            return
 
-if name == 'main': logging.basicConfig(level=logging.INFO) app = Application.builder().token(TOKEN).build() app.add_handler(CommandHandler("start", start)) app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)) app.add_handler(CallbackQueryHandler(handle_callback)) app.run_polling()
+        chosen_gifts[user_id] = gift_id
+        gift = gifts[gift_id]
 
+        await query.edit_message_text("Спасибо! Ссылка на подарок отправлена в личные сообщения.")
+        await context.bot.send_message(chat_id=user_id, text=f"Ты выбрал: {gift['name']}\n{gift['url']}")
+
+def main():
+    application = Application.builder().token(TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    application.add_handler(CallbackQueryHandler(button_callback))
+
+    application.run_polling()
+
+if __name__ == "__main__":
+    import os
+    import asyncio
+    logging.basicConfig(level=logging.INFO)
+    main()
