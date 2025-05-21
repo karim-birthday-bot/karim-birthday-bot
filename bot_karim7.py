@@ -1,93 +1,35 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
-import os
+import logging from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes import os
 
 TOKEN = os.getenv("TOKEN")
 
-rsvp_options = ["Я точно приду!", "Не получится(", "Пока не уверен(а)"]
+Список подарков
 
-wishlist = [
-    ("LEGO Sonic Храм, 325 деталей", "https://ozon.ru/t/8FM5GSK"),
-    ("LEGO Sonic Побег ежа Шэдоу", "https://ozon.ru/t/HO96qWv"),
-    ("Пластиковый конструктор", "https://ozon.ru/t/EvHJchU"),
-    ("Пижама", "https://ozon.ru/t/AsDmFZE"),
-    ("LEGO Sonic Мастерская Тейлза", "https://ozon.ru/t/fc8pBHB"),
-    ("Маска для плавания L/XL", "https://ozon.ru/t/4Cf7LuR"),
-    ("Эспандер для рук", "https://ozon.ru/t/7oJYfXm"),
-    ("Карандаши ГАММА", "https://ozon.ru/t/dhXBGrn"),
-]
+GIFTS = { "gift1": ("Конструктор LEGO Sonic Наклз и главный изумрудный храм, 325 деталей, 76998", "https://ozon.ru/t/BFM5GSK"), "gift2": ("Конструктор LEGO Sonic the Hedgehog Побег ежа Шэдоу, 76995", "https://ozon.ru/t/HO96qWv"), "gift3": ("Конструктор пластиковый", "https://ozon.ru/t/EvHJchU"), "gift4": ("Пижама", "https://ozon.ru/t/AsDmFZE"), "gift5": ("Конструктор LEGO Sonic Мастерская Тейлза и Самолет Торнадо, 376 деталей, 6+, 76991", "https://ozon.ru/t/fc8pBHB"), "gift6": ("Подводная маска для плавания Kuchenhaus", "https://ozon.ru/t/4Cf7LuR"), "gift7": ("Эспандер кистевой для рук 3в1", "https://ozon.ru/t/7oJYfXm"), "gift8": ("Набор двусторонних цветных карандашей ГАММА", "https://ozon.ru/t/dhXBGrn") } selected_gifts = set()
 
-selected_gifts = set()
+Главное меню
 
+main_menu = ReplyKeyboardMarkup( keyboard=[ ["Где и когда?", "Что будет?"], ["Подтвердить участие (RSVP)", "Выбрать подарок"] ], resize_keyboard=True )
 
-def main_menu():
-    keyboard = [
-        [InlineKeyboardButton("Где и когда?", callback_data="place")],
-        [InlineKeyboardButton("Что будет?", callback_data="details")],
-        [InlineKeyboardButton("Подтвердить участие (RSVP)", callback_data="rsvp")],
-        [InlineKeyboardButton("Выбрать подарок", callback_data="wishlist")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: await update.message.reply_text( "Привет, друг!\n\n" "Я — Карим, и 10 июля мне исполняется 7 лет!\n" "Добро пожаловать на мой День рождения — здесь ты найдёшь всю самую важную информацию: где мы празднуем, во сколько, что тебя ждёт и как повеселиться на полную!\n\n" "Будет весело, ярко и по-настоящему круто!\nРад, что ты со мной в этот день!", reply_markup=main_menu )
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: text = update.message.text if text == "Где и когда?": await update.message.reply_text( "Мы собираемся 10 июля в 16:00 в \nВсеволожск, БО "Топ Лес"\n\nНе опаздывай — будет круто!" ) elif text == "Что будет?": await update.message.reply_text( "Тебя ждёт настоящее приключение:\n— батут\n— квест\n— много вкусной еды\n— торт\n— и подарки!" ) elif text == "Подтвердить участие (RSVP)": keyboard = [ [InlineKeyboardButton("Я точно приду!", callback_data="yes")], [InlineKeyboardButton("Не получится(", callback_data="no")], [InlineKeyboardButton("Пока не уверен(а)", callback_data="maybe")] ] await update.message.reply_text("Подтверди, пожалуйста, своё участие:\nТы придёшь на праздник?", reply_markup=InlineKeyboardMarkup(keyboard)) elif text == "Выбрать подарок": keyboard = [] for key, (title, link) in GIFTS.items(): if key not in selected_gifts: keyboard.append([InlineKeyboardButton(title[:30] + "...", callback_data=key)]) if keyboard: await update.message.reply_text("Выбери один из подарков:", reply_markup=InlineKeyboardMarkup(keyboard)) else: await update.message.reply_text("Все подарки уже выбраны другими гостями.")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (
-        "Привет, друг!\n\n"
-        "Я — Карим, и 10 июля мне исполняется 7 лет!\n"
-        "Добро пожаловать на мой День рождения — здесь ты найдёшь всю самую важную информацию:\n"
-        "где мы празднуем, во сколько, что тебя ждёт и как повеселиться на полную!\n\n"
-        "Будет весело, ярко и по-настоящему круто!\nРад, что ты со мной в этот день!"
-    )
-    await update.message.reply_text(text, reply_markup=main_menu())
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None: query = update.callback_query await query.answer() data = query.data
 
+if data in ["yes", "no", "maybe"]:
+    answers = {
+        "yes": "Спасибо за ответ: «Я точно приду!». До встречи!",
+        "no": "Жаль, что не получится. Надеюсь увидеться в другой раз!",
+        "maybe": "Хорошо, дай знать, когда решишься!"
+    }
+    await query.edit_message_text(answers[data])
+elif data in GIFTS:
+    if data in selected_gifts:
+        await query.edit_message_text("Этот подарок уже выбран. Пожалуйста, выбери другой.")
+    else:
+        selected_gifts.add(data)
+        title, link = GIFTS[data]
+        await query.edit_message_text(f"Спасибо! Ты выбрал подарок: {title}\n\nСсылка на него: {link}")
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+if name == 'main': logging.basicConfig(level=logging.INFO) app = Application.builder().token(TOKEN).build() app.add_handler(CommandHandler("start", start)) app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)) app.add_handler(CallbackQueryHandler(handle_callback)) app.run_polling()
 
-    if query.data == "place":
-        await query.edit_message_text("Мы собираемся 10 июля в 16:00\nВсеволожск, БО «Топ Лес»\nНе опаздывай — будет круто!", reply_markup=main_menu())
-
-    elif query.data == "details":
-        await query.edit_message_text("Тебя ждёт праздник с играми, подарками, вкусной едой и волшебной атмосферой. Приходи в хорошем настроении!", reply_markup=main_menu())
-
-    elif query.data == "rsvp":
-        buttons = [[InlineKeyboardButton(text, callback_data=f"rsvp_{i}")] for i, text in enumerate(rsvp_options)]
-        await query.edit_message_text("Подтверди, пожалуйста, своё участие:\nТы придёшь на праздник?", reply_markup=InlineKeyboardMarkup(buttons))
-
-    elif query.data.startswith("rsvp_"):
-        index = int(query.data.split("_")[1])
-        answer = rsvp_options[index]
-        await query.edit_message_text(f"Спасибо за ответ: «{answer}».\nДо встречи!")
-
-    elif query.data == "wishlist":
-        buttons = []
-        for i, (title, link) in enumerate(wishlist):
-            if i not in selected_gifts:
-                buttons.append([InlineKeyboardButton(f"{title}", callback_data=f"gift_{i}")])
-            else:
-                buttons.append([InlineKeyboardButton(f"❌ {title}", callback_data="taken")])
-        buttons.append([InlineKeyboardButton("Назад в меню", callback_data="back_to_menu")])
-        await query.edit_message_text("Выбери подарок, который хочешь подарить:", reply_markup=InlineKeyboardMarkup(buttons))
-
-    elif query.data.startswith("gift_"):
-        gift_id = int(query.data.split("_")[1])
-        if gift_id in selected_gifts:
-            await query.answer("Этот подарок уже выбрали!", show_alert=True)
-            return
-        selected_gifts.add(gift_id)
-        title, link = wishlist[gift_id]
-        await query.edit_message_text(f"Спасибо! Ты выбрал подарок: {title}\nСсылка: {link}")
-
-    elif query.data == "taken":
-        await query.answer("Этот подарок уже выбран.", show_alert=True)
-
-    elif query.data == "back_to_menu":
-        await query.edit_message_text("Главное меню:", reply_markup=main_menu())
-
-
-if __name__ == "__main__":
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.run_polling()
