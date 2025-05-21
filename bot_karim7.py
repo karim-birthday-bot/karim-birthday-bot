@@ -1,10 +1,10 @@
+import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 TOKEN = os.getenv("TOKEN")
 
-# Список подарков (название и ссылка)
 gifts = [
     {"name": "LEGO Sonic: Наклз и изумрудный храм", "url": "https://ozon.ru/t/8FM5GSK"},
     {"name": "LEGO Sonic: Побег ежа Шэдоу", "url": "https://ozon.ru/t/HO96qWv"},
@@ -18,7 +18,6 @@ gifts = [
 
 chosen_gifts = {}
 
-# Главное меню
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
         ["Где и когда?", "Что будет?"],
@@ -79,7 +78,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         gift_id = int(query.data.split("_")[1])
         user_id = query.from_user.id
 
-        # Проверка, был ли уже выбран подарок этим пользователем
         if user_id in chosen_gifts:
             await query.edit_message_text("Ты уже выбрал подарок.")
             return
@@ -92,15 +90,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     application = Application.builder().token(TOKEN).build()
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     application.add_handler(CallbackQueryHandler(button_callback))
-
     application.run_polling()
 
 if __name__ == "__main__":
-    import os
-    import asyncio
     logging.basicConfig(level=logging.INFO)
     main()
