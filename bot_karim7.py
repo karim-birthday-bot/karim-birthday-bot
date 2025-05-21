@@ -1,71 +1,20 @@
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
-from datetime import datetime
-import os
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters import os
 
 TOKEN = os.getenv("TOKEN")
 
-rsvp_keyboard = InlineKeyboardMarkup([
-    [InlineKeyboardButton("Я точно приду!", callback_data="yes")],
-    [InlineKeyboardButton("Не получится(", callback_data="no")],
-    [InlineKeyboardButton("Пока не уверен(а)", callback_data="maybe")]
-])
+Список подарков с названиями и ссылками
 
-main_menu_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton("Где и когда?"), KeyboardButton("Что будет?")],
-        [KeyboardButton("Подтвердить участие (RSVP)")]
-    ],
-    resize_keyboard=True
-)
+GIFTS = [ ("LEGO Sonic: Храм и Наклз", "https://ozon.ru/t/BFM5GSK"), ("LEGO Sonic: Побег Шэдоу", "https://ozon.ru/t/HO96qWv"), ("Конструктор пластиковый", "https://ozon.ru/t/EvHJchU"), ("Пижама", "https://ozon.ru/t/AsDmFZE"), ("LEGO Sonic: Мастерская и Самолёт", "https://ozon.ru/t/fc8pBHB"), ("Маска для плавания Kuchenhaus", "https://ozon.ru/t/4Cf7LuR"), ("Эспандер 3в1, бирюзовый", "https://ozon.ru/t/7oJYfXm"), ("Карандаши ГАММА 12 шт.", "https://ozon.ru/t/dhXBGrn"), ]
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    start_text = (
-        "Привет, друг!\n\n"
-        "Я — Карим, и 10 июля мне исполняется 7 лет!\n"
-        "Добро пожаловать на мой День рождения — здесь ты найдёшь всю самую важную информацию: "
-        "где мы празднуем, во сколько, что тебя ждёт и как повеселиться на полную!\n\n"
-        "Будет весело, ярко и по-настоящему круто!\n"
-        "Рад, что ты со мной в этот день!"
-    )
-    await update.message.reply_text(start_text, reply_markup=main_menu_keyboard)
+selected_gifts = set()
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE): keyboard = [[InlineKeyboardButton(gift[0], callback_data=f"gift_{i}")] for i, gift in enumerate(GIFTS) if i not in selected_gifts] reply_markup = InlineKeyboardMarkup(keyboard) await update.message.reply_text("Выбери подарок из списка (после выбора он будет скрыт):", reply_markup=reply_markup)
 
-    if text == "Где и когда?":
-        await update.message.reply_text("Мы собираемся 10 июля в 16:00\nВсеволожск, БО «Топ Лес»\n\nНе опаздывай — будет круто!")
-    elif text == "Что будет?":
-        await update.message.reply_text("Будет весёлый праздник с играми, угощениями, тортом и сюрпризами!")
-    elif text == "Подтвердить участие (RSVP)":
-        await update.message.reply_text("Подтверди, пожалуйста, своё участие:\nТы придёшь на праздник?", reply_markup=rsvp_keyboard)
+async def gift_choice(update: Update, context: ContextTypes.DEFAULT_TYPE): query = update.callback_query await query.answer() gift_index = int(query.data.split('_')[1]) selected_gifts.add(gift_index) name, link = GIFTS[gift_index] await query.edit_message_text(text=f"Ты выбрал подарок: {name}\nСсылка: {link}")
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+application = Application.builder().token(TOKEN).build()
 
-    response_map = {
-        "yes": "Спасибо за ответ: «Я точно приду!». До встречи!",
-        "no": "Жаль, что не получится. Но мы будем на связи!",
-        "maybe": "Хорошо, напомню ближе к дате. Спасибо!"
-    }
+application.add_handler(CommandHandler("start", start)) application.add_handler(CallbackQueryHandler(gift_choice, pattern=r"^gift_\d+$"))
 
-    response = response_map.get(query.data, "Ответ получен.")
-    await query.edit_message_text(response)
+application.run_polling()
 
-    # После ответа возвращаем основное меню
-    await context.bot.send_message(
-        chat_id=query.message.chat_id,
-        text="Чем ещё могу помочь?",
-        reply_markup=main_menu_keyboard
-    )
-
-def main():
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(CallbackQueryHandler(button))
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
