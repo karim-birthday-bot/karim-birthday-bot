@@ -10,7 +10,7 @@ from telegram.ext import (
     filters,
 )
 
-# Настройка логгирования
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -26,10 +26,9 @@ GIFTS = [
     ("Карандаши ГАММА", "https://ozon.ru/t/dhXBGrn"),
 ]
 
-# Словарь для отслеживания выбора подарков
 selected_gifts = {}
 
-# Приветствие
+# Стартовое сообщение
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     selected_gifts[user_id] = None
@@ -40,20 +39,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "где мы празднуем, во сколько, что тебя ждёт и как повеселиться на полную!\n\n"
         "Будет весело, ярко и по-настоящему круто! Рад, что ты со мной в этот день!"
     )
-
-    menu_keyboard = [["Где и когда?", "Что будет?"],
-                     ["Подтвердить участие (RSVP)", "Выбрать подарок"]]
-
+    keyboard = [
+        ["Где и когда?", "Что будет?"],
+        ["Подтвердить участие (RSVP)", "Выбрать подарок"]
+    ]
     await update.message.reply_text(
         welcome_text,
-        reply_markup=ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True)
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
 
-# Информация о месте
+# Кнопка «Где и когда»
 async def where(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Мы собираемся 10 июля в 15:00, Всеволожск, БО «Топ Лес»\n\nНе опаздывай — будет круто!")
 
-# Информация о программе
+# Кнопка «Что будет?»
 async def what(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Тебя ждёт:\n"
@@ -64,7 +63,7 @@ async def what(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "- Отличное настроение!"
     )
 
-# RSVP
+# Кнопка RSVP
 async def rsvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
@@ -73,48 +72,42 @@ async def rsvp(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("Пока не уверен(а)", callback_data="rsvp_maybe"),
         ]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Подтверди, пожалуйста, своё участие:\nТы придёшь на праздник?", reply_markup=reply_markup)
+    await update.message.reply_text("Ты придёшь на праздник?", reply_markup=InlineKeyboardMarkup(keyboard))
 
-# Обработка RSVP кнопок
 async def rsvp_response(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    response_map = {
+    responses = {
         "rsvp_yes": "Спасибо за ответ: «Я точно приду!». До встречи!",
         "rsvp_no": "Спасибо за ответ: «Не получится(». Будем скучать!",
-        "rsvp_maybe": "Спасибо за ответ: «Пока не уверен(а)». Сообщи нам позже!",
+        "rsvp_maybe": "Спасибо за ответ: «Пока не уверен(а)». Сообщи нам позже!"
     }
-    await query.edit_message_text(text=response_map.get(query.data, "Спасибо за ответ!"))
+    await query.edit_message_text(text=responses.get(query.data, "Спасибо за ответ!"))
 
-# Выбор подарка
+# Кнопка «Выбрать подарок»
 async def choose_gift(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if selected_gifts.get(user_id):
         await update.message.reply_text("Ты уже выбрал подарок.")
         return
-
     buttons = [
-        [InlineKeyboardButton(text=title, url=url, callback_data=f"gift_{i}")]
-        for i, (title, url) in enumerate(GIFTS)
+        [InlineKeyboardButton(text=name, url=url, callback_data=f"gift_{i}")]
+        for i, (name, url) in enumerate(GIFTS)
     ]
-    await update.message.reply_text("Выбери подарок по ссылке и нажми кнопку, чтобы его закрепить.", reply_markup=InlineKeyboardMarkup(buttons))
+    await update.message.reply_text("Выбери подарок и нажми ссылку:", reply_markup=InlineKeyboardMarkup(buttons))
 
-# Обработка выбора подарка
-async def handle_gift_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def gift_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
-
     if selected_gifts.get(user_id):
         await query.answer("Ты уже выбрал подарок.")
         return
-
     index = int(query.data.split("_")[1])
     selected_gifts[user_id] = index
     await query.answer()
-    await query.edit_message_text(text=f"Спасибо! Ты выбрал: {GIFTS[index][0]}.")
+    await query.edit_message_text(f"Спасибо! Ты выбрал: {GIFTS[index][0]}.")
 
-# Обработка текстовых кнопок
+# Ответы на текстовые кнопки
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "Где и когда?":
@@ -126,20 +119,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "Выбрать подарок":
         await choose_gift(update, context)
 
-# Запуск бота
+# Запуск
 if __name__ == '__main__':
-    import asyncio
-    from telegram.ext import defaults
-
     TOKEN = os.getenv("TOKEN")
     if not TOKEN:
-        raise RuntimeError("Переменная окружения TOKEN не установлена.")
+        raise RuntimeError("Переменная окружения TOKEN не найдена.")
 
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(rsvp_response, pattern="^rsvp_"))
-    application.add_handler(CallbackQueryHandler(handle_gift_selection, pattern="^gift_"))
+    application.add_handler(CallbackQueryHandler(gift_selected, pattern="^gift_"))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     application.run_polling()
